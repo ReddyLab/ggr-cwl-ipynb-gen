@@ -117,6 +117,46 @@ def save_metadata(samples_df, conf_args, lib_type):
 
 
 def download_fastq_files(conf_args, lib_type, metadata_filename=None):
+    if conf_args['data_from'] == consts.DATA_SOURCES_HISEQ:
+        return download_fastq_files_hiseq(conf_args, lib_type,
+                                          metadata_filename)
+    if conf_args['data_from'] == consts.DATA_SOURCES_MISEQ:
+        return download_fastq_files_miseq(conf_args, lib_type,
+                                          metadata_filename)
+    if conf_args['data_from'] == consts.DATA_SOURCES_OTHER:
+        return []
+
+
+def download_fastq_files_miseq(conf_args, lib_type, metadata_filename):
+    cells = []
+    download_fn = "%s/processing/%s/scripts/download_%s.txt" % (conf_args['root_dir'], lib_type,
+                                                                conf_args['project_name'])
+    context = {
+        'output_fn': download_fn,
+        'project_name': conf_args['project_name'],
+        'metadata_filename': metadata_filename,
+        'root_dir': conf_args['root_dir'],
+        'lib_type': lib_type
+    }
+    contents = [render('templates/download_fastq_files.j2', context)]
+
+    cell_write_dw_file = Cell(contents=contents,
+                              description=["#### Download FASTQ from BaseMount (requires access to BaseSpace, see https://basemount.basespace.illumina.com/)",
+                                           "Create file to download FASTQ files from sequencing FTP"])
+    cells.extend(cell_write_dw_file.to_list())
+
+    logs_dir = "%s/processing/%s/logs" % (conf_args['root_dir'], lib_type)
+    execute_cell = CellSbatch(contents=['ssh hardac-xfer.genome.duke.edu \'sh %s\'' % download_fn],
+                              wrap_command='',
+                              description=" Execute file to download files",
+                              script_output="%s/%s_%s.out" % (logs_dir, conf_args['project_name'],
+                                                                  inspect.stack()[0][3]))
+    cells.extend(execute_cell.to_list())
+
+    return cells
+
+
+def download_fastq_files_hiseq(conf_args, lib_type, metadata_filename=None):
     cells = []
 
     download_fn = "%s/processing/%s/scripts/download_%s.txt" % (conf_args['root_dir'], lib_type,
@@ -386,6 +426,9 @@ def main():
                         help='Separator for metadata file (when different than Excel spread sheet)')
     parser.add_argument('--project-name', required=False, type=str,
                         help='Project name (by default, basename of metadata file name)')
+    parser.add_argument('--data-from', required=False, choices=consts.data_sources,
+                        default=consts.data_sources[0],
+                        help='Choices: %s' % (', '.join(consts.data_sources)))
 
     args = parser.parse_args()
 
@@ -407,6 +450,7 @@ def main():
         print outfile, "is an existing file. Please use -f or --force to overwrite the contents"
         sys.exit(1)
 
+    conf_args['data_from'] = args.data_from
     make_notebook(outfile,
                   args.metadata,
                   conf_args=conf_args)

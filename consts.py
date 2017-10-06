@@ -1,3 +1,11 @@
+DATA_SOURCES_HISEQ = 'hiseq'
+DATA_SOURCES_MISEQ = 'miseq'
+DATA_SOURCES_OTHER = 'other'
+data_sources = [
+    DATA_SOURCES_HISEQ,
+    DATA_SOURCES_MISEQ,
+    DATA_SOURCES_OTHER
+]
 library_type_chip_seq = 'chip_seq'
 library_type_rna_seq = 'rna_seq'
 library_type_atac_seq = 'atac_seq'
