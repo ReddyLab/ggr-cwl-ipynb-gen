@@ -282,14 +282,17 @@ def generate_qc_cell(conf_args, lib_type, pipeline_type):
     elif end_type == "pe":
         end_type = "paired_end"
 
-    execute_cell = Cell(contents=["%%bash",
-                                  "source %s alex" % consts.venv_path,
-                                  "cd %s/processing/%s/%s-%s" % (conf_args['root_dir'],
-                                                                 lib_type, conf_args['project_name'],
-                                                                 pipeline_type),
-                                  "python %s/generate_stats_%s_%s.py ./ -samples `/bin/ls -1 *PBC* | cut -d. -f1-6` > qc.txt"
-                                  % (consts.qc_script_dir, lib_type.replace("_", ""), end_type)],
-                        description="### Generate QCs for %s %s" % (lib_type, pipeline_type)
+    execute_cell = CellSbatch(
+        prolog=["source %s alex" % consts.conda_activate],
+        contents=list(),
+        wrap_command=" \\\n\t".join([
+            "cd %s/processing/%s/%s-%s;" % (conf_args['root_dir'],
+                                         lib_type,
+                                         conf_args['project_name'],
+                                         pipeline_type),
+            "python %s/generate_stats_%s_%s.py ./ -samples $(/bin/ls -1 *PBC.txt | sed 's@.PBC.txt@@')" % (consts.qc_script_dir, lib_type.replace("_", ""), end_type),
+            "> qc.txt"]),
+        description="### Generate QCs for %s %s" % (lib_type, pipeline_type)
                         )
     cells.extend(execute_cell.to_list())
 
@@ -319,10 +322,13 @@ def generate_plots(conf_args, metadata_file, lib_type, pipeline_type):
                                         "%s/fingerprint_and_spp/%s-%s" % (conf_args['root_dir'],
                                                                           conf_args['project_name'],
                                                                           pipeline_type)],
+                              wrap=False,
                               depends_on=True,
-                              prolog=['mkdir -p %s/fingerprint_and_spp/%s-%s %s/fingerprint_and_spp/logs' %
-                                           (conf_args['root_dir'], conf_args['project_name'],
-                                            pipeline_type, conf_args['root_dir'])],
+                              prolog=['mkdir -p \\\n\t%s/fingerprint_and_spp/%s-%s \\\n\t'
+                                      '%s/fingerprint_and_spp/logs' % (conf_args['root_dir'],
+                                                                       conf_args['project_name'],
+                                                                       pipeline_type,
+                                                                       conf_args['root_dir'])],
                               script_output="%s/fingerprint_and_spp/logs" % conf_args['root_dir'],
                               description="#### Generate fingerprint plots for %s-%s" % (conf_args['project_name'],
                                                                                          pipeline_type),
@@ -400,7 +406,7 @@ def create_cells(samples_df, conf_args=None):
             cells.extend(cwl_slurm_array_gen(conf_args, lib_type, metadata_filename=metadata_file,
                                              pipeline_type=pipeline_type, n_samples=n))
             cells.extend(generate_qc_cell(conf_args, lib_type, pipeline_type=pipeline_type))
-	    cells.extend(generate_plots(conf_args, metadata_file=metadata_file,
+            cells.extend(generate_plots(conf_args, metadata_file=metadata_file,
                                         lib_type=lib_type, pipeline_type=pipeline_type))
     return cells
 
