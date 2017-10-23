@@ -45,8 +45,9 @@ class Cell(object):
 
 
 class CellSbatch(Cell):
-    def __init__(self, script_output=None, depends_on=False, mem=None, cpus=None, partition=None, wrap=True,
-                 wrap_command='sh', array=None, prolog=[], **kwargs):
+    def __init__(self, script_output=None, depends_on=False, mem=None,
+                 cpus=None, partition=None, wrap=False, wrap_command='sh',
+                 array=None, prolog=list(), **kwargs):
         super(CellSbatch, self).__init__(**kwargs)
 
         content_prolog = ['sbatch']
@@ -116,69 +117,30 @@ def save_metadata(samples_df, conf_args, lib_type):
     return cells, outfile
 
 
-def download_fastq_files(conf_args, lib_type, metadata_filename=None):
-    if conf_args['data_from'] == consts.DATA_SOURCES_HISEQ:
-        return download_fastq_files_hiseq(conf_args, lib_type,
-                                          metadata_filename)
-    if conf_args['data_from'] == consts.DATA_SOURCES_MISEQ:
-        return download_fastq_files_miseq(conf_args, lib_type,
-                                          metadata_filename)
-    if conf_args['data_from'] == consts.DATA_SOURCES_OTHER:
-        return []
-
-
-def download_fastq_files_miseq(conf_args, lib_type, metadata_filename):
+def download_fastq_files(conf_args, lib_type, metadata_fn=None):
     cells = []
-    download_fn = "%s/processing/%s/scripts/download_%s.txt" % (conf_args['root_dir'], lib_type,
+
+    download_fn = "%s/processing/%s/scripts/download_%s.sh" % (conf_args['root_dir'], lib_type,
                                                                 conf_args['project_name'])
     context = {
         'output_fn': download_fn,
         'project_name': conf_args['project_name'],
-        'metadata_filename': metadata_filename,
+        'metadata_filename': metadata_fn,
         'root_dir': conf_args['root_dir'],
-        'lib_type': lib_type
+        'lib_type': lib_type,
+        'data_source': conf_args['data_from'],
+        'consts': consts
     }
     contents = [render('templates/download_fastq_files.j2', context)]
 
     cell_write_dw_file = Cell(contents=contents,
-                              description=["#### Download FASTQ from BaseMount (requires access to BaseSpace, see https://basemount.basespace.illumina.com/)",
-                                           "Create file to download FASTQ files from sequencing FTP"])
+                              description=["#### Download FASTQ from %s" % conf_args['data_from'],
+                                           "Create file to download FASTQ files"])
     cells.extend(cell_write_dw_file.to_list())
 
     logs_dir = "%s/processing/%s/logs" % (conf_args['root_dir'], lib_type)
-    execute_cell = CellSbatch(contents=['ssh hardac-xfer.genome.duke.edu \'sh %s\'' % download_fn],
-                              wrap_command='',
-                              description=" Execute file to download files",
-                              script_output="%s/%s_%s.out" % (logs_dir, conf_args['project_name'],
-                                                                  inspect.stack()[0][3]))
-    cells.extend(execute_cell.to_list())
-
-    return cells
-
-
-def download_fastq_files_hiseq(conf_args, lib_type, metadata_filename=None):
-    cells = []
-
-    download_fn = "%s/processing/%s/scripts/download_%s.txt" % (conf_args['root_dir'], lib_type,
-                                                                conf_args['project_name'])
-    context = {
-        'output_fn': download_fn,
-        'project_name': conf_args['project_name'],
-        'metadata_filename': metadata_filename,
-        'root_dir': conf_args['root_dir'],
-        'lib_type': lib_type
-    }
-    contents = [render('templates/download_fastq_files.j2', context)]
-
-    cell_write_dw_file = Cell(contents=contents,
-                              description=["#### Download FASTQ from sequencing core",
-                                           "Create file to download FASTQ files from sequencing FTP"])
-    cells.extend(cell_write_dw_file.to_list())
-
-    logs_dir = "%s/processing/%s/logs" % (conf_args['root_dir'], lib_type)
-    execute_cell = CellSbatch(contents=['ssh hardac-xfer.genome.duke.edu \'sh %s\'' % download_fn],
-                              wrap_command='',
-                              description=" Execute file to download files",
+    execute_cell = CellSbatch(contents=[download_fn],
+                              description="Execute file to download files",
                               script_output="%s/%s_%s.out" % (logs_dir, conf_args['project_name'],
                                                                   inspect.stack()[0][3]))
     cells.extend(execute_cell.to_list())
@@ -416,6 +378,21 @@ def get_pipeline_types(samples_df):
                 yield pipeline_type, np.sum(samples_filter)
 
 
+def data_acquisition_cells(conf_args, lib_type, metadata_file, nsamples):
+    cells = []
+    cells.extend(download_fastq_files(conf_args,
+                                      lib_type,
+                                      metadata_fn=metadata_file))
+    cells.extend(ungzip_fastq_files(conf_args, lib_type,
+                                    metadata_filename=metadata_file,
+                                    num_samples=nsamples))
+    cells.extend(merge_fastq_files(conf_args,
+                                   lib_type,
+                                   metadata_filename=metadata_file,
+                                   num_samples=nsamples))
+    return cells
+
+
 def create_cells(samples_df, conf_args=None):
     """
     Master function to write all code and text for the notebook.
@@ -429,15 +406,13 @@ def create_cells(samples_df, conf_args=None):
         - execute cwltool master file
     """
     lib_type = samples_df.iloc[0]['library type'].lower().replace('-', '_')
-    num_samples=samples_df.shape[0]
+    num_samples = samples_df.shape[0]
     cells = []
 
     cc, metadata_file = save_metadata(samples_df, conf_args, lib_type)
     cells.extend(cc)
 
-    cells.extend(download_fastq_files(conf_args, lib_type, metadata_filename=metadata_file))
-    cells.extend(ungzip_fastq_files(conf_args, lib_type, metadata_filename=metadata_file, num_samples=num_samples))
-    cells.extend(merge_fastq_files(conf_args, lib_type, metadata_filename=metadata_file, num_samples=num_samples))
+    cells.extend(data_acquisition_cells(conf_args, lib_type, metadata_file, num_samples))
     cells.extend(cwl_json_gen(conf_args, lib_type, metadata_filename=metadata_file))
     for pipeline_type, n in get_pipeline_types(samples_df):
         if n > 0:
