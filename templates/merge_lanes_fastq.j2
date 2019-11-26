@@ -38,9 +38,13 @@ seq_type=$(/data/reddylab/software/bin/print_tab_cols.awk -v cols="${seq_type_he
     | awk -v SLURM_ARRAY_TASK_ID=${SLURM_ARRAY_TASK_ID} 'NR==SLURM_ARRAY_TASK_ID+1{print}');
 
 
-for read_pair in R1 R2 R3 I1 I2;
+for read_pair in R1 R2 UMI;
 do
-    sample_files=$(/bin/ls ${sample_seq_name/ /}_S[0-9]*_L[0-9][0-9][0-9]_${read_pair}_*)
+    sample_files=$(/bin/ls ${sample_seq_name/ /}_S[0-9]*_L[0-9][0-9][0-9]_${read_pair}_* 2> /dev/null)
+    if [[ $? != 0 ]]; # If no samples found with that read_pair, continue
+    then
+        continue;
+    fi
     if [[ ${read_pair} == "R1" || (${seq_type/ /} == "PE" || ${seq_type/ /} == "pe") ]];
     then
         # Merge all lanes
@@ -49,7 +53,7 @@ do
         rm -f ${sample_files}
 
         # Rename samples with our sample Names
-        dest_filename=$(basename ${merged} | sed -r 's/\_S[0-9]+//; s/\_(R[123])\_/\.\1\./; s/\.[0-9]+\.fastq/\.fastq/')
+        dest_filename=$(basename ${merged} | sed -r 's/\_S[0-9]+//; s/\_(R1|R2|UMI)\_/\.\1\./; s/\.[0-9]+\.fastq/\.fastq/')
         mv ${merged} ${dest_filename}
 
         cleaned_dest_filename=${dest_filename/${sample_seq_name/ /}/${sample_name/ /}}
