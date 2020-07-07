@@ -145,7 +145,7 @@ def download_fastq_files(conf_args, lib_type, metadata_fn=None):
 
     logs_dir = "%s/processing/%s/logs" % (conf_args['root_dir'], lib_type)
     execute_cell = CellSbatch(contents=list(),
-                              partition="new,all",
+                              partition=",".join(consts.slurm_partitions),
                               wrap_command="ssh %s@%s 'sh %s'" % (conf_args['user'],
                                                                   consts.HOST_FOR_TUNNELED_DOWNLOAD,
                                                                   download_fn),
@@ -177,7 +177,7 @@ def ungzip_fastq_files(conf_args, lib_type, metadata_filename=None, num_samples=
     execute_cell = CellSbatch(contents=[ungzip_fn],
                               description="Execute file to ungzip FASTQ files",
                               depends_on=True,
-                              partition="new,all",
+                              partition=",".join(consts.slurm_partitions),
                               array="0-%d%%20" % (num_samples - 1),
                               script_output="%s/%s_%s_%%a.out" % (logs_dir, conf_args['project_name'],
                                                                   inspect.stack()[0][3]))
@@ -207,7 +207,7 @@ def merge_fastq_files(conf_args, lib_type, metadata_filename=None, num_samples=N
                               description="Execute file to merge lanes of FASTQ files",
                               depends_on=True,
                               array="0-%d%%20" % (num_samples-1),
-                              partition="new,all",
+                              partition=",".join(consts.slurm_partitions),
                               script_output="%s/%s_%s_%%a.out" % (logs_dir, conf_args['project_name'],
                                                                   inspect.stack()[0][3]),)
     cells.extend(execute_cell.to_list())
@@ -242,6 +242,7 @@ def cwl_json_gen(conf_args, lib_type, metadata_filename):
     execute_cell = CellSbatch(contents=[output_fn],
                               description="Execute file to create JSON files",
                               depends_on=True,
+                              partition=",".join(consts.slurm_partitions),
                               prolog=["source %s %s" % (consts.conda_activate,
                                                         consts.conda_environment)],
                               script_output="%s/%s_%s.out" % (logs_dir,
@@ -282,7 +283,7 @@ def cwl_slurm_array_gen(conf_args, lib_type, metadata_filename, pipeline_type, n
                               array="0-%d%%20" % (n_samples - 1),
                               prolog=["source %s %s" % (consts.conda_activate,
                                                         consts.conda_environment)],
-                              partition="new,all")
+                              partition=",".join(consts.slurm_partitions))
     cells.extend(execute_cell.to_list())
 
     return cells
@@ -326,7 +327,7 @@ def generate_qc_cell(conf_args, lib_type, pipeline_type):
 
     execute_cell = CellSbatch(contents=[output_fn],
                               depends_on=True,
-                              partition="new,all",
+                              partition=",".join(consts.slurm_partitions),
                               description="Generate QCs for %s-%s" % (conf_args["project_name"], pipeline_type))
 
     cells.extend(execute_cell.to_list())
@@ -380,7 +381,7 @@ def generate_plots(conf_args, metadata_file, lib_type, pipeline_type, n_samples)
                               depends_on=True,
                               array="0-%d%%5" % (n_samples - 1),
                               prolog=["source %s %s" % (consts.conda_activate, consts.conda_environment)],
-                              partition="new,all",
+                              partition=",".join(consts.slurm_partitions),
                               description="Generate plots and data for website")
     cells.extend(execute_cell.to_list())
 
@@ -418,9 +419,9 @@ def data_upload(conf_args, lib_type, pipeline_type):
       'script_dir': script_dir,
       'conda_activate': consts.conda_activate,
       'data_dir': data_dir,
-      'uri': conf_args['uri'],
-      'database': conf_args['database'],
-      'collection': conf_args['collection']
+      'uri': conf_args['uri'] if 'uri' in conf_args else None,
+      'database': conf_args['database'] if 'database' in conf_args else None,
+      'collection': conf_args['collection'] if 'collection' in conf_args else None
       }
 
     contents = [render('templates/%s.j2' % func_name, context)]
@@ -430,7 +431,7 @@ def data_upload(conf_args, lib_type, pipeline_type):
     execute_cell = CellSbatch(contents=[output_fn],
                               depends_on=True,
                               prolog=["source %s alex" % consts.conda_activate],
-                              partition="new,all",
+                              partition=",".join(consts.slurm_partitions),
                             description="### Upload ChIP-seq to web-application")
     cells.extend(execute_cell.to_list())
 
@@ -493,9 +494,6 @@ def data_acquisition_cells(conf_args, lib_type, metadata_file, nsamples):
         cells.extend(download_fastq_files(conf_args,
                                           lib_type,
                                           metadata_fn=metadata_file))
-        cells.extend(ungzip_fastq_files(conf_args, lib_type,
-                                        metadata_filename=metadata_file,
-                                        num_samples=nsamples))
         cells.extend(merge_fastq_files(conf_args,
                                        lib_type,
                                        metadata_filename=metadata_file,
@@ -584,30 +582,53 @@ def get_samples_by_library_type(metadata_file, sep='\t'):
         yield md.loc[md['library type'] == lt, named_cols]
 
 
+def init_conf_args(args,
+                   required_args = ['root_dir'],
+                   optional_args = ['user', 'sep', 'user_duke_email', 'project_name']):
+    conf_args = {}
+    if args['conf_file']:
+        conf_args = ruamel.yaml.load(args['conf_file'], Loader=ruamel.yaml.Loader)
+    for r in required_args:
+        conf_args[r] = args[r] if (r in args and args[r]) else conf_args[r]
+        try:
+            assert conf_args[r] is not None
+        except AssertionError, e:
+            print "[ERROR]", r, "not defined"
+            raise
+    for o in optional_args:
+        conf_args[o] = args[o] if (o in args and args[o]) else conf_args[o]
+    conf_args['user'] = conf_args['user'] or os.environ['USER']
+    conf_args['user_duke_email'] = conf_args['user_duke_email'] or "%s@duke.edu" % conf_args['user']
+    conf_args['project_name'] = conf_args['project_name'] or os.path.splitext(os.path.basename(args.metadata.name))[0]
+
+    return conf_args
+
 def main():
     parser = argparse.ArgumentParser('Generator of Jupyter notebooks to execute CWL pre-processing pipelines')
     parser.add_argument('-o', '--out', required=True, type=str, help='Jupyter notebook output file name')
-    parser.add_argument('-c', '--conf-file', required=True, type=file, help='YAML configuration file (see examples)')
     parser.add_argument('-m', '--metadata', required=True, type=file, help='Metadata file with samples information')
     parser.add_argument('-f', '--force', action='store_true', help='Force to overwrite output file')
     parser.add_argument('-n', '--no-upload', action='store_false', 
                         help='Avoids uploading generated data to database when specified')
-    parser.add_argument('--metadata-sep', dest='sep', required=False, type=str,
+    parser.add_argument('--metadata-sep', dest='sep', required=False, type=str, default='\t',
                         help='Separator for metadata file (when different than Excel spread sheet)')
     parser.add_argument('--project-name', required=False, type=str,
                         help='Project name (by default, basename of metadata file name)')
     parser.add_argument('--data-from', required=False, choices=consts.data_sources,
                         default=consts.data_sources[0],
                         help='Choices: %s' % (', '.join(consts.data_sources)))
+    parser.add_argument('-c', '--conf-file', required=False, type=file, help='YAML configuration file (see examples)')
+    parser.add_argument('-u', '--user', required=False,
+                        help='HARDAC User used in SLURM (default: ${USER})')
+    parser.add_argument('-e', '--user-duke-email', required=False,
+                        help='Email(s) notified when execution is finished (default: ${USER}@duke.edu)')
+    parser.add_argument('-r', '--root-dir', required=False,
+                        help='Root directory where all subfolders and files will be created '
+                             '(semi-required: either defined here or in conf-file')
 
     args = parser.parse_args()
 
-    conf_args = ruamel.yaml.load(args.conf_file, Loader=ruamel.yaml.Loader)
-    if args.project_name:
-        conf_args['project_name'] = args.project_name
-    else:
-        project_name = os.path.basename(args.metadata.name)
-        conf_args['project_name'] = os.path.splitext(project_name)[0]
+    conf_args = init_conf_args(vars(args))
 
     outfile = "%s.ipynb" % conf_args['project_name']
 
