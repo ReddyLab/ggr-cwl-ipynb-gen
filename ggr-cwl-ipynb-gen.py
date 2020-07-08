@@ -596,10 +596,10 @@ def init_conf_args(args,
             print "[ERROR]", r, "not defined"
             raise
     for o in optional_args:
-        conf_args[o] = args[o] if (o in args and args[o]) else conf_args[o]
+        conf_args[o] = args[o] if (o in args and args[o]) else (conf_args[o] if o in conf_args else None)
     conf_args['user'] = conf_args['user'] or os.environ['USER']
     conf_args['user_duke_email'] = conf_args['user_duke_email'] or "%s@duke.edu" % conf_args['user']
-    conf_args['project_name'] = conf_args['project_name'] or os.path.splitext(os.path.basename(args.metadata.name))[0]
+    conf_args['project_name'] = conf_args['project_name'] or os.path.splitext(os.path.basename(args['metadata'].name))[0]
 
     return conf_args
 
