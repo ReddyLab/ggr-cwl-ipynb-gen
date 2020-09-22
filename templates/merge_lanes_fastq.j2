@@ -2,6 +2,7 @@
 #!/bin/bash
 #SBATCH --array=0-{{ num_samples }}%20
 ORDER={{ project_name }}
+RAW_DATA_DIR={{ root_dir }}/data/{{ lib_type }}/raw_reads/${ORDER}
 PROCESSED_DATA_DIR={{ root_dir }}/data/{{ lib_type }}/processed_raw_reads/${ORDER}
 METADATA={{ metadata_filename }}
 
@@ -40,7 +41,7 @@ seq_type=$(/data/reddylab/software/bin/print_tab_cols.awk -v cols="${seq_type_he
 
 for read_pair in R1 R2 UMI;
 do
-    sample_files=$(/bin/ls ${sample_seq_name/ /}_S[0-9]*_L[0-9][0-9][0-9]_${read_pair}_* 2> /dev/null)
+    sample_files=$(/bin/ls ${RAW_DATA_DIR}/${sample_seq_name/ /}_S[0-9]*_L[0-9][0-9][0-9]_${read_pair}_* 2> /dev/null)
     if [[ $? != 0 ]]; # If no samples found with that read_pair, continue
     then
         continue;
@@ -48,12 +49,11 @@ do
     if [[ ${read_pair} == "R1" || (${seq_type/ /} == "PE" || ${seq_type/ /} == "pe") ]];
     then
         # Merge all lanes
-        merged=$(echo ${sample_files} | awk '{print $1}' | sed -e 's/_L[0-9]\{3\}_/_/')
+        merged=$(basename $(echo ${sample_files} | awk '{print $1}') | sed -e 's/_L[0-9]\{3\}_/_/')
         cat ${sample_files} > ${merged};
-        rm -f ${sample_files}
 
         # Rename samples with our sample Names
-        dest_filename=$(basename ${merged} | sed -r 's/\_S[0-9]+//; s/\_(R1|R2|UMI)\_/\.\1\./; s/\.[0-9]+\.fastq/\.fastq/')
+        dest_filename=$(basename $(echo ${merged} | awk '{print $1}') | sed -r 's/\_S[0-9]+//; s/\_(R1|R2|UMI)\_/\.\1\./; s/\.[0-9]+\.fastq/\.fastq/')
         mv ${merged} ${dest_filename}
 
         cleaned_dest_filename=${dest_filename/${sample_seq_name/ /}/${sample_name/ /}}

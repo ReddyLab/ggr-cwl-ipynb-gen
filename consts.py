@@ -43,6 +43,7 @@ strandnesses = ['unstranded', 'stranded', 'revstranded']
 blacklist_removal = [None, 'blacklist-removal']
 with_sjdb = True
 with_umis = [None, 'umis']
+slurm_partitions = ["all", "new"]
 
 # Environment configuration
 conda_activate = '/data/reddylab/software/miniconda2/bin/activate'
