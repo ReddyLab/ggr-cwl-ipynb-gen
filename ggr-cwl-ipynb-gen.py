@@ -10,11 +10,10 @@ import ruamel.yaml
 import consts
 import jinja2
 import inspect
-import glob
 import numpy as np
 
 encoding = sys.getfilesystemencoding()
-EXEC_DIR = os.path.dirname(unicode(__file__, encoding))
+EXEC_DIR = os.path.dirname(str(__file__))
 
 
 def render(tpl_path, context):
@@ -566,10 +565,11 @@ def get_samples_by_library_type(metadata_file, sep='\t'):
     :return: generator of panda's dataframe
     """
     try:
-        md = pd.read_excel(metadata_file,
+        md = pd.read_excel(metadata_file.name,
                            true_values=['Yes', 'Y', 'yes', 'y', 1],
                            false_values=['No', 'N', 'no', 'n', 0])
     except XLRDError:
+        print (XLRDError)
         md = pd.read_csv(metadata_file.name,
                          true_values=['Yes', 'Y', 'yes', 'y', 1],
                          false_values=['No', 'N', 'no', 'n', 0], sep=sep)
@@ -592,8 +592,8 @@ def init_conf_args(args,
         conf_args[r] = args[r] if (r in args and args[r]) else conf_args[r]
         try:
             assert conf_args[r] is not None
-        except AssertionError, e:
-            print "[ERROR]", r, "not defined"
+        except AssertionError as e:
+            print("[ERROR]", r, "not defined")
             raise
     for o in optional_args:
         conf_args[o] = args[o] if (o in args and args[o]) else (conf_args[o] if o in conf_args else None)
@@ -606,7 +606,8 @@ def init_conf_args(args,
 def main():
     parser = argparse.ArgumentParser('Generator of Jupyter notebooks to execute CWL pre-processing pipelines')
     parser.add_argument('-o', '--out', required=True, type=str, help='Jupyter notebook output file name')
-    parser.add_argument('-m', '--metadata', required=True, type=file, help='Metadata file with samples information')
+    parser.add_argument('-m', '--metadata', required=True, type=argparse.FileType('r'),
+                        help='Metadata file with samples information')
     parser.add_argument('-f', '--force', action='store_true', help='Force to overwrite output file')
     parser.add_argument('-n', '--no-upload', action='store_false', 
                         help='Avoids uploading generated data to database when specified')
@@ -617,7 +618,7 @@ def main():
     parser.add_argument('--data-from', required=False, choices=consts.data_sources,
                         default=consts.data_sources[0],
                         help='Choices: %s' % (', '.join(consts.data_sources)))
-    parser.add_argument('-c', '--conf-file', required=False, type=file, help='YAML configuration file (see examples)')
+    parser.add_argument('-c', '--conf-file', required=False, type=argparse.FileType('r'), help='YAML configuration file (see examples)')
     parser.add_argument('-u', '--user', required=False,
                         help='HARDAC User used in SLURM (default: ${USER})')
     parser.add_argument('-e', '--user-duke-email', required=False,
@@ -638,7 +639,7 @@ def main():
         outfile = args.out
 
     if os.path.isfile(outfile) and not args.force:
-        print outfile, "is an existing file. Please use -f or --force to overwrite the contents"
+        print(outfile, "is an existing file. Please use -f or --force to overwrite the contents")
         sys.exit(1)
 
     conf_args['upload'] = args.no_upload
