@@ -7,6 +7,9 @@ This code is free software; you can redistribute it and/or modify it
 under the terms of the BSD License (see the file LICENSE included with
 the distribution).
 """
+import sys
+if sys.version_info[0] == 2:
+    sys.exit("Sorry, Python 2 is not supported anymore. Please check and old branch (pre 2021)")
 from setuptools import setup, find_packages
 import pathlib
 
@@ -32,8 +35,6 @@ setup(
         'Intended Audience :: Science/Research',
         'Topic :: Scientific/Engineering :: Bio-Informatics',
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
@@ -47,7 +48,7 @@ setup(
     ],
     include_package_data=True,
     py_modules=["ggr_cwl_ipynb_gen"],
-    python_requires='>=2.7, <4',
+    python_requires='>=3.1',
     install_requires=[
         'jinja2 >=2.8',
         'nbformat >=4.0.1',
