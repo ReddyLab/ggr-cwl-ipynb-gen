@@ -1,10 +1,10 @@
+#!/usr/bin/env python
 from pymongo import MongoClient
 import datetime
 import os, csv
 import argparse
 import pandas as pd
 import base64
-import consts
 import logging
 
 # Python script and command line tool for compiling fingerprint and QC data from ChIP-seq
