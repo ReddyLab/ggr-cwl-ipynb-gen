@@ -31,7 +31,7 @@ setup(
         'xlrd >=1.0.0',
         'ruamel.yaml >=0.11.11',
         'setuptools',
-        'pymongo'
+        'pymongo >=3.4.0'
     ],  # Optional
     data_files=[
         ('templates', ['ggr_cwl_ipynb_gen/templates/cwl_json_gen.j2']),
