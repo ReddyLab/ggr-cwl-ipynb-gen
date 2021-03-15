@@ -1,11 +1,14 @@
 #!/usr/bin/env python
-from pymongo import MongoClient
-import datetime
-import os, csv
+
 import argparse
-import pandas as pd
 import base64
+import csv
+import datetime
 import logging
+import os
+
+import pandas as pd
+from pymongo import MongoClient
 
 # Python script and command line tool for compiling fingerprint and QC data from ChIP-seq
 # experiments. Make sure to activate the 'alex' virtual environment from miniconda using
@@ -14,7 +17,7 @@ import logging
 # then run this script on those outputs.
 
 # VERSION 1.0 Notes: pandas.dataframe.set_value() method is deprecated and will be removed
-# in later iterations. 
+# in later iterations.
 
 
 CWD = os.getcwd() + "/"
@@ -26,7 +29,7 @@ def pretty_print(df):
         print(df)
 
 
-def stringFormat(string):
+def string_format(string):
     return string.strip().lower().replace(" ", "_").replace('-', '_').replace("%", "percent")
 
 
@@ -55,8 +58,8 @@ def read_metadata(in_file):
     # Read a 2-line tab-delimited file with header and contents
     with open(in_file, 'rb') as f:
         reader = csv.reader(f, delimiter='\t')
-        header = [stringFormat(ele) for ele in next(reader)]
-        contents = [stringFormat(ele) for ele in next(reader)]
+        header = [string_format(ele) for ele in next(reader)]
+        contents = [string_format(ele) for ele in next(reader)]
         attr = dict(zip(header, contents))
 
     return attr
@@ -80,12 +83,12 @@ def standardize_header(arr):
                    "broadpeak_count": "broad_peak_count", "narrowpeak_count": "narrow_peak_count",
                    "nrf": "nrf", "pbc": "pbc_one", "nsc": "nsc", "rsc": "rsc", "comment": "comment"}
     elements = []
-    useColumns = []
+    use_columns = []
     for i, ele in enumerate(arr):
         if ele.lower() in header_dict.keys():
             elements.append(header_dict[ele.lower()])
-            useColumns.append(i)
-    return elements, useColumns
+            use_columns.append(i)
+    return elements, use_columns
 
 
 def process_directory(in_dir):
@@ -116,7 +119,7 @@ def process_directory(in_dir):
             elif filename.endswith('.cross_corr.txt'):                          # If cross corr data, add to array
                 spp_data_arr.append(file_path)
 
-    # Raise error if QC file was not found. 
+    # Raise error if QC file was not found.
     if not os.path.isfile(qc_file):
         logging.error("QC file was not found in the data directory (i.e. qc.csv, qc.txt)")
         raise IOError("QC file was not found in the data directory (i.e. qc.csv, qc.txt)")
@@ -155,7 +158,7 @@ def process_directory(in_dir):
             if os.stat(filename).st_size != 0:
                 with open(filename, 'rb') as f:
                     reader = csv.reader(f, delimiter='\t')
-                    header = [stringFormat(ele) for ele in next(reader)]
+                    header = [string_format(ele) for ele in next(reader)]
                     new_fp_df = pd.read_csv(f, delimiter='\t', header=None,
                                             names=header, engine='python')
                     fp_df = fp_df.append(new_fp_df)
@@ -182,7 +185,7 @@ def process_directory(in_dir):
             df.set_value(sample, 'spp_image', read_file_base64(spp_image))
         if metadata_file:
             # Read in all metadata attributes into df
-            for key, value in read_metadata(metadata_file).iteritems():
+            for key, value in read_metadata(metadata_file):
                 df.set_value(sample, key, value)
         # Set flowcell name to base directory
         df.set_value(sample, 'flowcell', os.path.basename(in_dir))
@@ -212,7 +215,7 @@ def main():
         if os.path.isdir(args.in_dirs[i]):
             new_df = process_directory(args.in_dirs[i])
             df = df.append(new_df)
-    factor_names = [row.split('.')[0] for row in df.index.values]
+
     df.rename(columns={'diff._enrichment':'diff_enrichment'}, inplace=True)
 
     # Convert Pandas dataframe into list of dictionaries
@@ -234,7 +237,7 @@ def main():
         sample = data[sample_name]
         sample['sample'] = sample_name
         sample['last_modified'] =  datetime.datetime.utcnow()
-        logging.info("Uploading sample: %s" % sample_name)
+        logging.info("Uploading sample: %s", sample_name)
         sample_coll.replace_one({'sample': sample_name}, sample, upsert=True)
 
         # Set flowcell data
@@ -244,14 +247,11 @@ def main():
         flowcell_data['samples'].append(sample_name)
 
     # Upsert the flowcell
-    logging.info("Uploading flowcell: %s" % flowcell_data)
+    logging.info("Uploading flowcell: %s", flowcell_data)
     flowcell_coll.replace_one({'name': flowcell_name}, flowcell_data, upsert=True)
 
     logging.info("Data upload terminated successfully")
 
-
-    return
-    
 
 if __name__ == '__main__':
     main()

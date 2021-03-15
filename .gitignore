@@ -1,3 +1,4 @@
 .idea/
 *~
-consts.pyc
+*.pyc
+venv
