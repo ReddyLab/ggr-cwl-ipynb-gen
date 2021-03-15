@@ -11,36 +11,10 @@ import sys
 if sys.version_info[0] == 2:
     sys.exit("Sorry, Python 2 is not supported anymore. Please check and old branch (pre 2021)")
 from setuptools import setup, find_packages
-import pathlib
-
-here = pathlib.Path(__file__).parent.resolve()
-
-# Get the long description from the README file
-long_description = (here / 'README.md').read_text(encoding='utf-8')
-
-# Load version as VERSION environmental variable
-exec(open("VERSION.py").read())
 
 setup(
-    name='ggr_cwl_ipynb_gen',
-    version=VERSION,
-    description='IPython notebook generator for GGR CWL processing pipelines of genomic data',
-    long_description=long_description,  # Optional
     long_description_content_type='text/markdown',
     url='https://github.com/alexbarrera/ggr-cwl-ipynb-gen',
-    author='Alejandro Barrera',
-    author_email='alejandro.barrera@duke.edu',
-    classifiers=[
-        'Development Status :: 3 - Alpha',
-        'Intended Audience :: Science/Research',
-        'Topic :: Scientific/Engineering :: Bio-Informatics',
-        'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9'
-    ],
     keywords='cwl, bioinformatics, development',
     scripts=[
         "ggr_cwl_ipynb_gen/ggr-cwl-ipynb-gen.py",
@@ -68,10 +42,6 @@ setup(
         ('templates', ['ggr_cwl_ipynb_gen/templates/generate_qc_cell.j2']),
         ('templates', ['ggr_cwl_ipynb_gen/templates/merge_lanes_fastq.j2']),
         ('templates', ['ggr_cwl_ipynb_gen/templates/ungzip_fastq_files.j2']),
-    ],  # Optional
-    project_urls={
-        'Bug Reports': 'https://github.com/alexbarrera/ggr-cwl-ipynb-gen/issues',
-        'Source': 'https://github.com/alexbarrera/ggr-cwl-ipynb-gen/',
-    }
+    ]
 
 )

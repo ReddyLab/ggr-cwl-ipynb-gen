@@ -5,5 +5,4 @@ pandas >=0.17.1
 xlrd >=1.0.0
 ruamel.yaml >=0.11.11
 
-setuptools
 pymongo

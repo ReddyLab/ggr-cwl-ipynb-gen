@@ -634,6 +634,8 @@ def main():
     parser.add_argument('-r', '--root-dir', required=False,
                         help='Root directory where all subfolders and files will be created '
                              '(semi-required: either defined here or in conf-file)')
+    parser.add_argument('-v', '--version', required=False,
+                        help='Print version of the program and exit')
 
     args = parser.parse_args()
 
