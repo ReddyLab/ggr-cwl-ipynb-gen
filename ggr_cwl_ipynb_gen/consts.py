@@ -11,11 +11,11 @@ data_sources = [
     DATA_SOURCES_DUKEDS,
     DATA_SOURCES_LOCAL
 ]
-library_type_chip_seq = 'chip_seq'
-library_type_rna_seq = 'rna_seq'
-library_type_atac_seq = 'atac_seq'
-library_type_starr_seq = 'starr_seq'
-notebook_blurb = "This notebook will create all the necessary files, scripts and folders to pre-process " \
+LIBRARY_TYPE_CHIP_SEQ = 'chip_seq'
+LIBRARY_TYPE_RNA_SEQ = 'rna_seq'
+LIBRARY_TYPE_ATAC_SEQ = 'atac_seq'
+LIBRARY_TYPE_STARR_SEQ = 'starr_seq'
+NOTEBOOK_BLURB = "This notebook will create all the necessary files, scripts and folders to pre-process " \
                  "the aforementioned project. Is designed to be used in a jupyter server deployed in a system running " \
                  "SLURM. The majority of the scripts and heavy-lifting processes are wrapped up in sbatch scripts." \
                  "As an end user, in order to pre-process your samples provided in the spread sheet, " \
@@ -23,35 +23,35 @@ notebook_blurb = "This notebook will create all the necessary files, scripts and
                  "of the rest for you."
 
 # Pipelines configuration
-star_genome='/data/reddylab/Reference_Data/Genomes/hg38/STAR_genome_sjdbOverhang_49_novelSJDB'
-separate_jsons=True
-mem = {
+STAR_GENOME = '/data/reddylab/Reference_Data/Genomes/hg38/STAR_genome_sjdbOverhang_49_novelSJDB'
+SEPARATE_JSONS = True
+MEM = {
     'chip_seq': 24000,
     'rna_seq': 48000,
     'atac_seq': 24000,
     'starr_seq': 32000
 }
-nthreads = {
+NTHREADS = {
     'chip_seq': 16,
     'rna_seq': 24,
     'atac_seq': 16,
     'starr_seq': 24
 }
-seq_ends = ['se', 'pe']
-with_controls = [False, 'with-control']
-strandnesses = ['unstranded', 'stranded', 'revstranded']
-blacklist_removal = [None, 'blacklist-removal']
-with_sjdb = True
-with_umis = [None, 'umis']
-slurm_partitions = ["all", "new"]
+SEQ_ENDS = ['se', 'pe']
+WITH_CONTROLS = [False, 'with-control']
+STRANDNESSES = ['unstranded', 'stranded', 'revstranded']
+BLACKLIST_REMOVAL = [None, 'blacklist-removal']
+WITH_SJDB = True
+WITH_UMIS = [None, 'umis']
+SLURM_PARTITIONS = ["all", "new"]
 
 # Environment configuration
-conda_activate = '/data/reddylab/software/miniconda2/bin/activate'
-contamination_script='/data/reddylab/Darryl/GitHub/reddylab/contamination_check'
-conda_environment = 'cwl10'
-plot_script = '/data/reddylab/Darryl/GitHub/reddylab/countFactors_metadata.sh'
-qc_script_dir = '/data/reddylab/software/cwl/bin'
-data_upload_script = '/data/reddylab/Darryl/GitHub/reddylab/csv_to_mongo.py'
+CONDA_ACTIVATE = '/data/reddylab/software/miniconda2/bin/activate'
+CONTAMINATION_SCRIPT = '/data/reddylab/Darryl/GitHub/reddylab/contamination_check' # not used
+CONDA_ENVIRONMENT = 'cwl10'
+PLOT_SCRIPT = '/data/reddylab/Darryl/GitHub/reddylab/countFactors_metadata.sh' # not used
+QC_SCRIPT_DIR = '/data/reddylab/software/cwl/bin'
+DATA_UPLOAD_SCRIPT = '/data/reddylab/Darryl/GitHub/reddylab/csv_to_mongo.py' # not used
 HOST_FOR_TUNNELED_DOWNLOAD = "Hardac-xfer.genome.duke.edu"
 
 # Package constants

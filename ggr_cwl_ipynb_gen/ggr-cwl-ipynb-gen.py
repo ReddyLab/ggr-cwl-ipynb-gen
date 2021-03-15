@@ -1,25 +1,27 @@
 #!/usr/bin/env python
+
 import argparse
-import nbformat
-import nbformat.v3 as nbf
+import inspect
 import sys
 import os
-import pandas as pd
-from jinja2 import FileSystemLoader, PackageLoader
-from xlrd import XLRDError
-import ruamel.yaml
-import ggr_cwl_ipynb_gen.consts as consts
 import jinja2
-import inspect
-from jinja2.exceptions import TemplateNotFound
+import nbformat
+import nbformat.v3 as nbf
 import numpy as np
+import pandas as pd
+import ruamel.yaml
 
-encoding = sys.getfilesystemencoding()
+from jinja2 import FileSystemLoader, PackageLoader
+from jinja2.exceptions import TemplateNotFound
+from xlrd import XLRDError
+
+from . import consts
+
 EXEC_DIR = os.path.dirname(str(__file__))
 
 
 def render(tpl_path, context):
-    path, filename = os.path.split(tpl_path)
+    _path, filename = os.path.split(tpl_path)
     try:
         jinja_rendered = jinja2.Environment(
             loader=FileSystemLoader(os.path.join(EXEC_DIR, "templates"))
@@ -31,11 +33,11 @@ def render(tpl_path, context):
     return jinja_rendered
 
 
-class Cell(object):
+class Cell:
     def __init__(self, contents, description=None):
         self.contents = contents
         self.description = description
-        if type(self.description) is not list:
+        if not isinstance(self.description, list):
             self.description = [self.description]
         self.header = []
         # self.header_inputs = []
@@ -56,27 +58,30 @@ class Cell(object):
 class CellSbatch(Cell):
     def __init__(self, script_output=None, depends_on=False, mem=None,
                  cpus=None, partition=None, wrap_command=None, array=None,
-                 prolog=list(), **kwargs):
-        super(CellSbatch, self).__init__(**kwargs)
+                 prologue=None, **kwargs):
+        super().__init__(**kwargs)
 
-        content_prolog = ['sbatch']
+        if prologue is None:
+            prologue = []
+
+        content_prologue = ['sbatch']
         if script_output:
-            content_prolog.extend(['-o', script_output, '\\\n'])
+            content_prologue.extend(['-o', script_output, '\\\n'])
         if partition:
-            content_prolog.extend(['-p', partition, '\\\n'])
+            content_prologue.extend(['-p', partition, '\\\n'])
         if mem:
-            content_prolog.extend(['--mem', str(mem), '\\\n'])
+            content_prologue.extend(['--mem', str(mem), '\\\n'])
         if cpus:
-            content_prolog.extend(['-c', str(cpus), '\\\n'])
+            content_prologue.extend(['-c', str(cpus), '\\\n'])
         if depends_on:
-            content_prolog.extend(['--depend', 'afterok:$1', '\\\n'])
+            content_prologue.extend(['--depend', 'afterok:$1', '\\\n'])
         if array is not None:
-            content_prolog.extend(['--array', array, '\\\n'])
+            content_prologue.extend(['--array', array, '\\\n'])
         if wrap_command:
-            content_prolog.append('--wrap="%s' % wrap_command)
+            content_prologue.append('--wrap="%s' % wrap_command)
             self.contents.append('"')
-        self.contents = content_prolog + self.contents
-        self.contents = prolog + [' '.join(self.contents)]
+        self.contents = content_prologue + self.contents
+        self.contents = prologue + [' '.join(self.contents)]
 
         self.header = ["%%script"]
         self.header.append('--out blocking_job_str')
@@ -87,11 +92,11 @@ class CellSbatch(Cell):
         self.header = [' '.join(self.header)]
 
     def to_list(self):
-        cells = super(CellSbatch, self).to_list()
+        cells = super().to_list()
 
         # We need to add an extra code cell to compute the SLURM job id
         extra_cell = Cell(
-            contents=["import re", "blocking_job = re.match('Submitted batch job (\d+).*', blocking_job_str).group(1)"],
+            contents=["import re", r"blocking_job = re.match('Submitted batch job (\d+).*', blocking_job_str).group(1)"],
             description="Extract blocking job id"
         )
         cells.extend(extra_cell.to_list())
@@ -109,7 +114,7 @@ def save_metadata(samples_df, conf_args, lib_type):
                                 "mkdir -p %s/processing/%s/logs" % (conf_args['root_dir'], lib_type)
                                 ],
                       description=["# %s - %s" % (conf_args['project_name'], lib_type),
-                                   consts.notebook_blurb,
+                                   consts.NOTEBOOK_BLURB,
                                    "#### Create necessary folder(s)"])
     cells.extend(cell_mkdir.to_list())
 
@@ -152,7 +157,7 @@ def download_fastq_files(conf_args, lib_type, metadata_fn=None):
 
     logs_dir = "%s/processing/%s/logs" % (conf_args['root_dir'], lib_type)
     execute_cell = CellSbatch(contents=list(),
-                              partition=",".join(consts.slurm_partitions),
+                              partition=",".join(consts.SLURM_PARTITIONS),
                               wrap_command="ssh %s@%s 'sh %s'" % (conf_args['user'],
                                                                   consts.HOST_FOR_TUNNELED_DOWNLOAD,
                                                                   download_fn),
@@ -184,7 +189,7 @@ def ungzip_fastq_files(conf_args, lib_type, metadata_filename=None, num_samples=
     execute_cell = CellSbatch(contents=[ungzip_fn],
                               description="Execute file to ungzip FASTQ files",
                               depends_on=True,
-                              partition=",".join(consts.slurm_partitions),
+                              partition=",".join(consts.SLURM_PARTITIONS),
                               array="0-%d%%20" % (num_samples - 1),
                               script_output="%s/%s_%s_%%a.out" % (logs_dir, conf_args['project_name'],
                                                                   inspect.stack()[0][3]))
@@ -214,7 +219,7 @@ def merge_fastq_files(conf_args, lib_type, metadata_filename=None, num_samples=N
                               description="Execute file to merge lanes of FASTQ files",
                               depends_on=True,
                               array="0-%d%%20" % (num_samples-1),
-                              partition=",".join(consts.slurm_partitions),
+                              partition=",".join(consts.SLURM_PARTITIONS),
                               script_output="%s/%s_%s_%%a.out" % (logs_dir, conf_args['project_name'],
                                                                   inspect.stack()[0][3]), )
     cells.extend(execute_cell.to_list())
@@ -235,10 +240,10 @@ def cwl_json_gen(conf_args, lib_type, metadata_filename):
         'project_name': conf_args['project_name'],
         'root_dir': conf_args['root_dir'],
         'lib_type': lib_type,
-        'star_genome': consts.star_genome,
-        'mem': consts.mem[lib_type.lower()],
-        'nthreads': consts.nthreads[lib_type.lower()],
-        'separate_jsons': consts.separate_jsons
+        'star_genome': consts.STAR_GENOME,
+        'mem': consts.MEM[lib_type.lower()],
+        'nthreads': consts.NTHREADS[lib_type.lower()],
+        'separate_jsons': consts.SEPARATE_JSONS
     }
     contents = [render('templates/%s.j2' % func_name, context)]
 
@@ -249,9 +254,9 @@ def cwl_json_gen(conf_args, lib_type, metadata_filename):
     execute_cell = CellSbatch(contents=[output_fn],
                               description="Execute file to create JSON files",
                               depends_on=True,
-                              partition=",".join(consts.slurm_partitions),
-                              prolog=["source %s %s" % (consts.conda_activate,
-                                                        consts.conda_environment)],
+                              partition=",".join(consts.SLURM_PARTITIONS),
+                              prologue=["source %s %s" % (consts.CONDA_ACTIVATE,
+                                                        consts.CONDA_ENVIRONMENT)],
                               script_output="%s/%s_%s.out" % (logs_dir,
                                                                   conf_args['project_name'],
                                                                   inspect.stack()[0][3]))
@@ -274,8 +279,8 @@ def cwl_slurm_array_gen(conf_args, lib_type, metadata_filename, pipeline_type, n
         'root_dir': conf_args['root_dir'],
         'user_duke_email': conf_args['user_duke_email'],
         'lib_type': lib_type,
-        'mem': consts.mem[lib_type.lower()],
-        'nthreads': consts.nthreads[lib_type.lower()],
+        'mem': consts.MEM[lib_type.lower()],
+        'nthreads': consts.NTHREADS[lib_type.lower()],
         'pipeline_type': pipeline_type,
         'consts': consts
     }
@@ -288,9 +293,9 @@ def cwl_slurm_array_gen(conf_args, lib_type, metadata_filename, pipeline_type, n
                               description="Execute SLURM array master file",
                               depends_on=True,
                               array="0-%d%%20" % (n_samples - 1),
-                              prolog=["source %s %s" % (consts.conda_activate,
-                                                        consts.conda_environment)],
-                              partition=",".join(consts.slurm_partitions))
+                              prologue=["source %s %s" % (consts.CONDA_ACTIVATE,
+                                                        consts.CONDA_ENVIRONMENT)],
+                              partition=",".join(consts.SLURM_PARTITIONS))
     cells.extend(execute_cell.to_list())
 
     return cells
@@ -318,12 +323,12 @@ def generate_qc_cell(conf_args, lib_type, pipeline_type):
     qc_type = lib_type.replace("_", "")
     context = {
         'output_fn': output_fn,
-        "conda_activate": consts.conda_activate,
+        "conda_activate": consts.CONDA_ACTIVATE,
         'root_dir': conf_args["root_dir"],
         "library_type": lib_type,
         "project_name": conf_args["project_name"],
         "pipeline_type": pipeline_type,
-        "qc_script_dir": consts.qc_script_dir,
+        "qc_script_dir": consts.QC_SCRIPT_DIR,
         "qc_type": qc_type,
         "end_type": end_type
     }
@@ -334,7 +339,7 @@ def generate_qc_cell(conf_args, lib_type, pipeline_type):
 
     execute_cell = CellSbatch(contents=[output_fn],
                               depends_on=True,
-                              partition=",".join(consts.slurm_partitions),
+                              partition=",".join(consts.SLURM_PARTITIONS),
                               description="Generate QCs for %s-%s" % (conf_args["project_name"], pipeline_type))
 
     cells.extend(execute_cell.to_list())
@@ -370,7 +375,7 @@ def generate_plots(conf_args, metadata_file, lib_type, pipeline_type, n_samples)
 
     context = {
         'output_fn': output_fn,
-        'env_activate': consts.conda_activate,
+        'env_activate': consts.CONDA_ACTIVATE,
         'root_dir': conf_args['root_dir'],
         'lib_type': lib_type,
         'project_name': conf_args['project_name'],
@@ -387,8 +392,8 @@ def generate_plots(conf_args, metadata_file, lib_type, pipeline_type, n_samples)
     execute_cell = CellSbatch(contents=[output_fn],
                               depends_on=True,
                               array="0-%d%%5" % (n_samples - 1),
-                              prolog=["source %s %s" % (consts.conda_activate, consts.conda_environment)],
-                              partition=",".join(consts.slurm_partitions),
+                              prologue=["source %s %s" % (consts.CONDA_ACTIVATE, consts.CONDA_ENVIRONMENT)],
+                              partition=",".join(consts.SLURM_PARTITIONS),
                               description="Generate plots and data for website")
     cells.extend(execute_cell.to_list())
 
@@ -424,7 +429,7 @@ def data_upload(conf_args, lib_type, pipeline_type):
       'library_type': lib_type,
       'project_name': conf_args['project_name'],
       'script_dir': script_dir,
-      'conda_activate': consts.conda_activate,
+      'conda_activate': consts.CONDA_ACTIVATE,
       'data_dir': data_dir,
       'uri': conf_args['uri'] if 'uri' in conf_args else None,
       'database': conf_args['database'] if 'database' in conf_args else None,
@@ -437,8 +442,8 @@ def data_upload(conf_args, lib_type, pipeline_type):
 
     execute_cell = CellSbatch(contents=[output_fn],
                               depends_on=True,
-                              prolog=["source %s alex" % consts.conda_activate],
-                              partition=",".join(consts.slurm_partitions),
+                              prologue=["source %s alex" % consts.CONDA_ACTIVATE],
+                              partition=",".join(consts.SLURM_PARTITIONS),
                               description="### Upload ChIP-seq to web-application")
     cells.extend(execute_cell.to_list())
 
@@ -447,9 +452,9 @@ def data_upload(conf_args, lib_type, pipeline_type):
 
 def get_pipeline_types(samples_df):
     lib_type = samples_df['library type'].iloc[0].lower().replace('-', '_')
-    if lib_type == consts.library_type_chip_seq:
-        for seq_end in consts.seq_ends:
-            for with_control in consts.with_controls:
+    if lib_type == consts.LIBRARY_TYPE_CHIP_SEQ:
+        for seq_end in consts.SEQ_ENDS:
+            for with_control in consts.WITH_CONTROLS:
                 samples_filter = samples_df['paired-end or single-end'].str.lower() == seq_end
                 if with_control:
                     samples_filter = samples_filter & (~samples_df['control'].isnull())
@@ -458,20 +463,20 @@ def get_pipeline_types(samples_df):
                     samples_filter = samples_filter & (samples_df['control'].isnull())
                     pipeline_type = '-'.join([seq_end])
                 yield pipeline_type, np.sum(samples_filter)
-    if lib_type == consts.library_type_rna_seq:
-        for seq_end in consts.seq_ends:
-            for strandness in consts.strandnesses:
+    if lib_type == consts.LIBRARY_TYPE_RNA_SEQ:
+        for seq_end in consts.SEQ_ENDS:
+            for strandness in consts.STRANDNESSES:
                 samples_filter = \
                     (samples_df['paired-end or single-end'].str.lower() == seq_end) \
                     & (samples_df['strand specificity'].str.lower() == strandness)
-                if consts.with_sjdb:
+                if consts.WITH_SJDB:
                     pipeline_type = '-'.join([seq_end, strandness, 'with-sjdb'])
                 else:
                     pipeline_type = '-'.join([seq_end, strandness])
                 yield pipeline_type, np.sum(samples_filter)
-    if lib_type == consts.library_type_atac_seq:
-        for seq_end in consts.seq_ends:
-            for with_blacklist_removal in consts.blacklist_removal:
+    if lib_type == consts.LIBRARY_TYPE_ATAC_SEQ:
+        for seq_end in consts.SEQ_ENDS:
+            for with_blacklist_removal in consts.BLACKLIST_REMOVAL:
                 samples_filter = (samples_df['paired-end or single-end'].str.lower() == seq_end)
                 if with_blacklist_removal:
                     pipeline_type = '-'.join([seq_end, with_blacklist_removal])
@@ -480,9 +485,9 @@ def get_pipeline_types(samples_df):
                     pipeline_type = '-'.join([seq_end])
                     samples_filter = samples_filter & (samples_df['blacklist removal'].isnull())
                 yield pipeline_type, np.sum(samples_filter)
-    if lib_type == consts.library_type_starr_seq:
-        for seq_end in consts.seq_ends:
-            for with_umis in consts.with_umis:
+    if lib_type == consts.LIBRARY_TYPE_STARR_SEQ:
+        for seq_end in consts.SEQ_ENDS:
+            for with_umis in consts.WITH_UMIS:
                 samples_filter = (samples_df['paired-end or single-end'].str.lower() == seq_end)
                 if with_umis:
                     pipeline_type = '-'.join([seq_end, with_umis])
@@ -577,7 +582,7 @@ def get_samples_by_library_type(metadata_file, sep='\t'):
                            true_values=['Yes', 'Y', 'yes', 'y', 1],
                            false_values=['No', 'N', 'no', 'n', 0])
     except XLRDError:
-        print (XLRDError)
+        print(XLRDError)
         md = pd.read_csv(metadata_file.name,
                          true_values=['Yes', 'Y', 'yes', 'y', 1],
                          false_values=['No', 'N', 'no', 'n', 0], sep=sep)
@@ -590,9 +595,13 @@ def get_samples_by_library_type(metadata_file, sep='\t'):
         yield md.loc[md['library type'] == lt, named_cols]
 
 
-def init_conf_args(args,
-                   required_args = ['root_dir'],
-                   optional_args = ['user', 'sep', 'user_duke_email', 'project_name']):
+def init_conf_args(args, required_args = None, optional_args = None):
+    if required_args is None:
+        required_args = ['root_dir']
+
+    if optional_args is None:
+        optional_args = ['user', 'sep', 'user_duke_email', 'project_name']
+
     conf_args = {}
     if args['conf_file']:
         conf_args = ruamel.yaml.load(args['conf_file'], Loader=ruamel.yaml.Loader)
@@ -600,7 +609,7 @@ def init_conf_args(args,
         conf_args[r] = args[r] if (r in args and args[r]) else conf_args[r]
         try:
             assert conf_args[r] is not None
-        except AssertionError as e:
+        except AssertionError:
             print("[ERROR]", r, "not defined")
             raise
     for o in optional_args:
