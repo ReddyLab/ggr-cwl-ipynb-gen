@@ -1,11 +1,11 @@
 # ggr-cwl-ipynb-gen
-Jupyter notebook generator to download and execute the processing files for GGR related datasets. 
-At this point, is not intented to cover all use cases, but to serve as a quick generator of all 
+Jupyter notebook generator to download and execute the processing files for GGR related datasets.
+At this point, is not intented to cover all use cases, but to serve as a quick generator of all
 related files and scripts to pre-process genomic data generated at the [Duke-GCB Sequencing Core](https://genome.duke.edu/cores-and-services/sequencing-and-genomic-technologies) in [HARDAC](https://genome.duke.edu/cores-and-services/computational-solutions/compute-environments-genomics).
 
 Example of usage:
 ```
-$ python ggr-cwl-ipynb-gen.py \
+$ python ggr_cwl_ipynb_gen.py \
   --root-dir /path/to/rootdir \
   --metadata examples/Hong_3979_170316B1.xlsx \
   --out /path/to/output_dir \
@@ -15,7 +15,7 @@ The information in the example metadata and configuration file should reveal wha
 
 For a full list of options:
 ```
-$ python ggr-cwl-ipynb-gen.py -h
+$ python ggr_cwl_ipynb_gen.py -h
 usage: Generator of Jupyter notebooks to execute CWL pre-processing pipelines [-h] -o OUT -m METADATA [-f] [-n] [--metadata-sep SEP] [--project-name PROJECT_NAME]
                                                                               [--data-from {sftp,miseq,other,dukeds,local}] [-c CONF_FILE] [-u USER] [-e USER_DUKE_EMAIL] [-r ROOT_DIR]
 

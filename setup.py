@@ -17,7 +17,7 @@ setup(
     url='https://github.com/alexbarrera/ggr-cwl-ipynb-gen',
     keywords='cwl, bioinformatics, development',
     scripts=[
-        "ggr_cwl_ipynb_gen/ggr-cwl-ipynb-gen.py",
+        "ggr_cwl_ipynb_gen/ggr_cwl_ipynb_gen.py",
         "chipdb_upload/data_upload.py",
     ],
     include_package_data=True,
