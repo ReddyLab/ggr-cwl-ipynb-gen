@@ -1,9 +1,9 @@
 # ipynb Generator configuration
-DATA_SOURCES_SFTP   = 'sftp'
-DATA_SOURCES_MISEQ  = 'miseq'
+DATA_SOURCES_SFTP = 'sftp'
+DATA_SOURCES_MISEQ = 'miseq'
 DATA_SOURCES_DUKEDS = 'dukeds'
-DATA_SOURCES_OTHER  = 'other'
-DATA_SOURCES_LOCAL  = 'local'
+DATA_SOURCES_OTHER = 'other'
+DATA_SOURCES_LOCAL = 'local'
 data_sources = [
     DATA_SOURCES_SFTP,
     DATA_SOURCES_MISEQ,
@@ -47,12 +47,12 @@ SLURM_PARTITIONS = ["all", "new"]
 
 # Environment configuration
 CONDA_ACTIVATE = '/data/reddylab/software/miniconda2/bin/activate'
-CONTAMINATION_SCRIPT = '/data/reddylab/Darryl/GitHub/reddylab/contamination_check' # not used
+CONTAMINATION_SCRIPT = '/data/reddylab/Darryl/GitHub/reddylab/contamination_check'
 CONDA_ENVIRONMENT = 'cwl10'
-PLOT_SCRIPT = '/data/reddylab/Darryl/GitHub/reddylab/countFactors_metadata.sh' # not used
+PLOT_SCRIPT = '/data/reddylab/Darryl/GitHub/reddylab/countFactors_metadata.sh'
 QC_SCRIPT_DIR = '/data/reddylab/software/cwl/bin'
-DATA_UPLOAD_SCRIPT = '/data/reddylab/Darryl/GitHub/reddylab/csv_to_mongo.py' # not used
+DATA_UPLOAD_SCRIPT = '/data/reddylab/Darryl/GitHub/reddylab/csv_to_mongo.py'
 HOST_FOR_TUNNELED_DOWNLOAD = "Hardac-xfer.genome.duke.edu"
 
 # Package constants
-PACKAGE_NAME = "ggr_cwl_ipynb_gen"
+PACKAGE_NAME = "ipynb_gen"
