@@ -3,13 +3,12 @@
 import inspect
 import os
 import sys
-import ruamel.yaml
 import jinja2
 import nbformat
 import nbformat.v3 as nbf
 import numpy as np
 import pandas as pd
-
+import ruamel.yaml
 from jinja2 import FileSystemLoader, PackageLoader
 from jinja2.exceptions import TemplateNotFound
 from xlrd import XLRDError
