@@ -107,16 +107,16 @@ def process_directory(in_dir):
         # Append the file path
         file_path = os.path.join(in_dir, filename)
         if os.stat(file_path).st_size != 0:
-            if filename.lower().endswith('_metadata.txt'):                      # Find metadata
+            if filename.lower().endswith('_metadata.txt'):  # Find metadata
                 metadata_files.append(file_path)
-            elif filename.endswith('_QCmetrics.txt'):                           # If fingerprint QC file, add to array
+            elif filename.endswith('_QCmetrics.txt'):  # If fingerprint QC file, add to array
                 fingerprint_qc_arr.append(file_path)
             elif filename.lower() == 'qc.csv' or filename.lower() == 'qc.txt' \
-                    or filename.lower() == 'chip_seq_summary_iter0.tsv':        # If lab-computed QC file, set var
+                    or filename.lower() == 'chip_seq_summary_iter0.tsv':  # If lab-computed QC file, set var
                 qc_file = file_path
             elif filename.endswith(".png") or filename.endswith(".pdf"):
                 images.append(file_path)
-            elif filename.endswith('.cross_corr.txt'):                          # If cross corr data, add to array
+            elif filename.endswith('.cross_corr.txt'):  # If cross corr data, add to array
                 spp_data_arr.append(file_path)
 
     # Raise error if QC file was not found.
@@ -167,7 +167,7 @@ def process_directory(in_dir):
         df = df.merge(fp_df, left_index=True, right_index=True, how='outer')
 
     # Add fingerprint images and metadata information
-    for sample in df.index.values:                                  # Index is sample name
+    for sample in df.index.values:  # Index is sample name
         fp_image = ''
         spp_image = ''
         metadata_file = ''
@@ -193,21 +193,9 @@ def process_directory(in_dir):
     return df
 
 
-def main():
-    parser = argparse.ArgumentParser('Generates QC metric summary file for available ChIP-seq samples')
-    parser.add_argument('-i', '--in_dirs', required=True, nargs='+',
-                        help='Directory(ies)for fingerprint data')
-    parser.add_argument('-u', '--uri', required=True,
-                        help='URI for database upload')
-    parser.add_argument('-d', '--database', required=True,
-                        help='Database name for upload')
-    parser.add_argument('-c', '--collection', required=True,
-                        help='Collection name for database')
-    parser.add_argument('-o', '--output', required=True, help="Filename for output log")
-    args = parser.parse_args()
+def run(args):
 
     logging.basicConfig(filename=args.output, level=logging.DEBUG)
-
 
     # Process each given data directory
     df = pd.DataFrame()
@@ -216,7 +204,7 @@ def main():
             new_df = process_directory(args.in_dirs[i])
             df = df.append(new_df)
 
-    df.rename(columns={'diff._enrichment':'diff_enrichment'}, inplace=True)
+    df.rename(columns={'diff._enrichment': 'diff_enrichment'}, inplace=True)
 
     # Convert Pandas dataframe into list of dictionaries
     data = df.to_dict(orient='index')
@@ -236,7 +224,7 @@ def main():
         # Set sample data
         sample = data[sample_name]
         sample['sample'] = sample_name
-        sample['last_modified'] =  datetime.datetime.utcnow()
+        sample['last_modified'] = datetime.datetime.utcnow()
         logging.info("Uploading sample: %s", sample_name)
         sample_coll.replace_one({'sample': sample_name}, sample, upsert=True)
 
@@ -251,7 +239,3 @@ def main():
     flowcell_coll.replace_one({'name': flowcell_name}, flowcell_data, upsert=True)
 
     logging.info("Data upload terminated successfully")
-
-
-if __name__ == '__main__':
-    main()
