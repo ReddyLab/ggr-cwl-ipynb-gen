@@ -43,7 +43,7 @@ STRANDNESSES = ['unstranded', 'stranded', 'revstranded']
 BLACKLIST_REMOVAL = [None, 'blacklist-removal']
 WITH_SJDB = True
 WITH_UMIS = [None, 'umis']
-SLURM_PARTITIONS = ["all", "new"]
+SLURM_PARTITIONS = ["all"]
 
 # Environment configuration
 CONDA_ACTIVATE = '/data/reddylab/software/miniconda2/bin/activate'
