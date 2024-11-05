@@ -47,9 +47,9 @@ class Cell:
     def to_list(self):
         cells = []
         if self.description:
-            cells.append(nbf.new_text_cell('markdown', source=self.description))
+            cells.append(nbf.new_text_cell('markdown', source= "\n".join(self.description)))
         if self.contents:
-            cells.append(nbf.new_code_cell(input=self.header + self.contents))
+            cells.append(nbf.new_code_cell(input= "\n".join(self.header + self.contents)))
         return cells
 
 
