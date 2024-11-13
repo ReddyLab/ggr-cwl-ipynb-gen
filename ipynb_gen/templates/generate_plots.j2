@@ -1,5 +1,7 @@
 %%writefile {{ output_fn }}
 #!/bin/bash
+set -euo pipefail
+
 #SBATCH --job-name=generate_fingerplot
 #SBATCH --output={{ root_dir }}/processing/{{ lib_type }}/logs/generate-plot.{{ project_name }}-{{ pipeline_type }}-%a.out
 

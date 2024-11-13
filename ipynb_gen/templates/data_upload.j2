@@ -1,5 +1,7 @@
 %%writefile {{ output_fn }}
 #!/bin/bash
+set -euo pipefail
+
 #SBATCH --job-name=data_upload
 #SBATCH --output={{ root_dir }}/processing/{{ library_type }}/logs/data_upload.{{ project_name }}-{{ pipeline_type }}.out
 

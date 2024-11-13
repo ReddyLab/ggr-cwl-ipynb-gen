@@ -62,7 +62,7 @@ class CellSbatch(Cell):
         if prologue is None:
             prologue = []
 
-        content_prologue = ['sbatch']
+        content_prologue = ['set -euo pipefail', 'sbatch']
         if script_output:
             content_prologue.extend(['-o', script_output, '\\\n'])
         if partition:
@@ -154,14 +154,14 @@ def download_fastq_files(conf_args, lib_type, metadata_fn=None):
     cells.extend(cell_write_dw_file.to_list())
 
     logs_dir = "%s/processing/%s/logs" % (conf_args['root_dir'], lib_type)
-    execute_cell = CellSbatch(contents=list(),
+    execute_cell = CellSbatch(contents=list(download_fn),
                               partition=",".join(consts.SLURM_PARTITIONS),
-                              wrap_command="ssh %s@%s 'sh %s'" % (conf_args['user'],
-                                                                  consts.HOST_FOR_TUNNELED_DOWNLOAD,
-                                                                  download_fn),
                               description="Execute file to download files",
                               script_output="%s/%s_%s.out" % (logs_dir, conf_args['project_name'],
-                                                              inspect.stack()[0][3]))
+                                                              inspect.stack()[0][3]),
+                              prologue=["source %s %s" % (consts.CONDA_ACTIVATE,
+                                                          consts.CONDA_ENVIRONMENT)],
+                            )
     cells.extend(execute_cell.to_list())
 
     return cells
@@ -176,7 +176,8 @@ def ungzip_fastq_files(conf_args, lib_type, metadata_filename=None, num_samples=
         'project_name': conf_args['project_name'],
         'root_dir': conf_args['root_dir'],
         'lib_type': lib_type,
-        'num_samples': num_samples
+        'num_samples': num_samples,
+        'consts': consts
     }
     contents = [render('templates/ungzip_fastq_files.j2', context)]
 
@@ -207,7 +208,8 @@ def merge_fastq_files(conf_args, lib_type, metadata_filename=None, num_samples=N
         'project_name': conf_args['project_name'],
         'root_dir': conf_args['root_dir'],
         'lib_type': lib_type,
-        'num_samples': num_samples
+        'num_samples': num_samples,
+        'consts': consts
     }
     contents = [render('templates/merge_lanes_fastq.j2', context)]
 
@@ -243,7 +245,8 @@ def cwl_json_gen(conf_args, lib_type, metadata_filename):
         'star_genome': consts.STAR_GENOME,
         'mem': consts.MEM[lib_type.lower()],
         'nthreads': consts.NTHREADS[lib_type.lower()],
-        'separate_jsons': consts.SEPARATE_JSONS
+        'separate_jsons': consts.SEPARATE_JSONS,
+        'consts': consts
     }
     contents = [render('templates/%s.j2' % func_name, context)]
 
@@ -253,7 +256,7 @@ def cwl_json_gen(conf_args, lib_type, metadata_filename):
     logs_dir = "%s/processing/%s/logs" % (conf_args['root_dir'], lib_type)
     execute_cell = CellSbatch(contents=[output_fn],
                               description="Execute file to create JSON files",
-                              depends_on=True,
+                              depends_on=conf_args['data_from'] != consts.DATA_SOURCES_LOCAL,
                               partition=",".join(consts.SLURM_PARTITIONS),
                               prologue=["source %s %s" % (consts.CONDA_ACTIVATE,
                                                           consts.CONDA_ENVIRONMENT)],
@@ -330,7 +333,8 @@ def generate_qc_cell(conf_args, lib_type, pipeline_type):
         "pipeline_type": pipeline_type,
         "qc_script_dir": consts.QC_SCRIPT_DIR,
         "qc_type": qc_type,
-        "end_type": end_type
+        "end_type": end_type,
+        "consts": consts
     }
     contents = [render('templates/%s.j2' % func_name, context)]
 
@@ -548,9 +552,9 @@ def create_cells(samples_df, conf_args=None):
             cells.extend(cwl_slurm_array_gen(conf_args, lib_type, metadata_filename=metadata_file,
                                              pipeline_type=pipeline_type, n_samples=n))
             cells.extend(generate_qc_cell(conf_args, lib_type, pipeline_type=pipeline_type))
-            cells.extend(generate_plots(conf_args, metadata_file=metadata_file,
-                                        lib_type=lib_type, pipeline_type=pipeline_type, n_samples=n))
-            cells.extend(data_upload(conf_args, lib_type, pipeline_type))
+            # cells.extend(generate_plots(conf_args, metadata_file=metadata_file,
+            #                             lib_type=lib_type, pipeline_type=pipeline_type, n_samples=n))
+            # cells.extend(data_upload(conf_args, lib_type, pipeline_type))
 
     return cells
 

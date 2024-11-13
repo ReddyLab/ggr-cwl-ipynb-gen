@@ -1,5 +1,7 @@
 %%writefile {{ output_fn }}
 #!/bin/bash
+set -euo pipefail
+
 METADATA={{ metadata_filename }}
 DATA_HOME={{ root_dir }}/data/{{ lib_type }}
 mkdir -p ${DATA_HOME}/raw_reads/
@@ -14,7 +16,7 @@ BASEMOUNT_TMP=${DATA_HOME}/raw_reads/${SEQ_PROJECT}/bm_tmp
 mkdir -p ${BASEMOUNT_TMP}
 
 # Mount BaseMount
-basemount --config Mitchell.MiSeq ${BASEMOUNT_TMP}
+basemount --config {{ consts.ILLUMINA_BASESPACE_USER }} ${BASEMOUNT_TMP}
 
 # Metadata
 rsync -rvz \

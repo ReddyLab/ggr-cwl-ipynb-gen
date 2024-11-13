@@ -1,5 +1,7 @@
 %%writefile {{ output_fn }}
 #!/bin/bash
+set -euo pipefail
+
 #SBATCH --array=0-{{ num_samples }}%20
 ORDER={{ project_name }}
 RAW_DATA_DIR={{ root_dir }}/data/{{ lib_type }}/raw_reads/${ORDER}
@@ -31,11 +33,11 @@ then
     exit 1
 fi
 
-sample_seq_name=$(/data/reddylab/software/bin/print_tab_cols.awk -v cols="${seq_name_header}" ${METADATA} \
+sample_seq_name=$({{ consts.SOFTWARE_ROOTDIR }}/bin/print_tab_cols.awk -v cols="${seq_name_header}" ${METADATA} \
     | awk -v SLURM_ARRAY_TASK_ID=${SLURM_ARRAY_TASK_ID} 'NR==SLURM_ARRAY_TASK_ID+1{print}');
-sample_name=$(/data/reddylab/software/bin/print_tab_cols.awk -v cols="${name_header}" ${METADATA} \
+sample_name=$({{ consts.SOFTWARE_ROOTDIR }}/bin/print_tab_cols.awk -v cols="${name_header}" ${METADATA} \
     | awk -v SLURM_ARRAY_TASK_ID=${SLURM_ARRAY_TASK_ID} 'NR==SLURM_ARRAY_TASK_ID+1{print}');
-seq_type=$(/data/reddylab/software/bin/print_tab_cols.awk -v cols="${seq_type_header}" ${METADATA} \
+seq_type=$({{ consts.SOFTWARE_ROOTDIR }}/bin/print_tab_cols.awk -v cols="${seq_type_header}" ${METADATA} \
     | awk -v SLURM_ARRAY_TASK_ID=${SLURM_ARRAY_TASK_ID} 'NR==SLURM_ARRAY_TASK_ID+1{print}');
 
 

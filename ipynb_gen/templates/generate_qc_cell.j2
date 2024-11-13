@@ -1,9 +1,11 @@
 %%writefile {{ output_fn }}
 #!/bin/bash
+set -euo pipefail
+
 #SBATCH --job-name=qc
 #SBATCH --output={{ root_dir }}/processing/{{ library_type }}/logs/qc_gen.{{ project_name }}-{{ pipeline_type }}.out
 
-source {{ conda_activate }} alex
+source {{ consts.CONDA_ACTIVATE }} {{ consts.CONDA_ENVIRONMENT }}
 cd {{ root_dir }}/processing/{{ library_type }}/{{ project_name }}-{{ pipeline_type }}
 
 python {{ qc_script_dir }}/generate_stats_{{ qc_type }}_{{ end_type }}.py ./ \

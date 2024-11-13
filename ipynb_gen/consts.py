@@ -23,7 +23,9 @@ NOTEBOOK_BLURB = "This notebook will create all the necessary files, scripts and
                  "of the rest for you."
 
 # Pipelines configuration
-STAR_GENOME = '/data/reddylab/Reference_Data/Genomes/hg38/STAR_genome_sjdbOverhang_49_novelSJDB'
+SOFTWARE_ROOTDIR = '/hpc/group/gersbachlab/software/'
+CWL_WORKFLOWS_ROOTDIR = '/hpc/group/gersbachlab/software/IGVF-cwl/v1.0'
+STAR_GENOME = '/hpc/group/gersbachlab/Reference_Data/Genomes/hg38/STAR_genome_sjdbOverhang_49_novelSJDB'
 SEPARATE_JSONS = True
 MEM = {
     'chip_seq': 24000,
@@ -43,16 +45,16 @@ STRANDNESSES = ['unstranded', 'stranded', 'revstranded']
 BLACKLIST_REMOVAL = [None, 'blacklist-removal']
 WITH_SJDB = True
 WITH_UMIS = [None, 'umis']
-SLURM_PARTITIONS = ["all"]
+SLURM_PARTITIONS = ["common"]
 
 # Environment configuration
-CONDA_ACTIVATE = '/data/reddylab/software/miniconda2/bin/activate'
+CONDA_ACTIVATE = '/hpc/group/gersbachlab/software/miniforge3/bin/activate'
 CONTAMINATION_SCRIPT = '/data/reddylab/Darryl/GitHub/reddylab/contamination_check'  # not used
-CONDA_ENVIRONMENT = 'cwl10'
+CONDA_ENVIRONMENT = '/hpc/group/gersbachlab/aeb84/mamba_envs/cwl10'
 PLOT_SCRIPT = '/data/reddylab/Darryl/GitHub/reddylab/countFactors_metadata.sh'  # not used
-QC_SCRIPT_DIR = '/data/reddylab/software/cwl/bin'
-DATA_UPLOAD_SCRIPT = '/data/reddylab/Darryl/GitHub/reddylab/csv_to_mongo.py'
-HOST_FOR_TUNNELED_DOWNLOAD = "Hardac-xfer.genome.duke.edu"
-
+QC_SCRIPT_DIR = '/hpc/group/gersbachlab/software/cwl/bin'
+DATA_UPLOAD_SCRIPT = '/data/reddylab/Darryl/GitHub/reddylab/csv_to_mongo.py'  # not used
+HOST_FOR_TUNNELED_DOWNLOAD = "Hardac-xfer.genome.duke.edu" # This will not work in DCC
+ILLUMINA_BASESPACE_USER = 'Mitchell.MiSeq'
 # Package constants
 PACKAGE_NAME = "ipynb_gen"

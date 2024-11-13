@@ -1,5 +1,7 @@
 %%writefile {{ output_fn }}
 #!/bin/bash
+set -euo pipefail
+
 ORDER={{ project_name }}
 PROJECT_HOME={{ root_dir }}
 METADATA={{ metadata_filename }}
@@ -20,7 +22,7 @@ PROCESSED_DATA_DIR=${PROJECT_HOME}/data/{{ lib_type }}/processed_raw_reads/${ORD
 
 mkdir -p ${PROCESSED_DATA_DIR}
 
-sample=$(/data/reddylab/software/bin/print_tab_cols.awk -v cols="${seq_name_header}" ${METADATA} |\
+sample=$({{ consts.SOFTWARE_ROOTDIR }}//bin/print_tab_cols.awk -v cols="${seq_name_header}" ${METADATA} |\
             awk -v SLURM_ARRAY_TASK_ID=${SLURM_ARRAY_TASK_ID} 'NR==SLURM_ARRAY_TASK_ID+1{print}');
 
 for ii in $(/bin/find ${RAW_DATA_DIR} -type f | /bin/grep "${sample/ /}_.*.gz");
