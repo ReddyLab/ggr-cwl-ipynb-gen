@@ -15,7 +15,7 @@ export PATH="/hpc/group/gersbachlab/software/cwl/bin:$PATH"
 # export PATH="/hpc/group/gersbachlab/software/rsem-1.2.21/:$PATH"
 {% if lib_type == 'rna_seq' %}export PATH="/hpc/group/gersbachlab/software/STAR-STAR_2.4.1a/bin/Linux_x86_64/:$PATH"
 export PATH="/hpc/group/gersbachlab/software/subread-1.4.6-p4-Linux-x86_64/bin/:$PATH"
-export PATH="/hpc/group/gersbachlab/software/bamtools-2.2.3/bin/:$PATH"
+# export PATH="/hpc/group/gersbachlab/software/bamtools-2.2.3/bin/:$PATH"
 {% else %}export PATH="/hpc/group/gersbachlab/software/phantompeakqualtools-1.2/:$PATH"{% endif %}
 # export PATH="{{ consts.CONDA_ACTIVATE | replace("bin/activate", "envs/%s/bin" % consts.CONDA_ENVIRONMENT)}}:$PATH"
 
@@ -25,7 +25,6 @@ module load Bowtie/1.2.2
 module load Bowtie2
 ## module load samtools/1.14-rhel8. # samtools v1.18 already install in cwl10
 ## module load Java/1.8.0_60
-module load RSEM/1.3.3
 module load Picard/2.18.2
 module load Trimmomatic/0.39
 module load Boost/1.75-rhel8
