@@ -154,7 +154,7 @@ def download_fastq_files(conf_args, lib_type, metadata_fn=None):
     cells.extend(cell_write_dw_file.to_list())
 
     logs_dir = "%s/processing/%s/logs" % (conf_args['root_dir'], lib_type)
-    execute_cell = CellSbatch(contents=list(download_fn),
+    execute_cell = CellSbatch(contents=[download_fn],
                               partition=",".join(consts.SLURM_PARTITIONS),
                               description="Execute file to download files",
                               script_output="%s/%s_%s.out" % (logs_dir, conf_args['project_name'],
