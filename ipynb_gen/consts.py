@@ -4,12 +4,19 @@ DATA_SOURCES_MISEQ = 'miseq'
 DATA_SOURCES_DUKEDS = 'dukeds'
 DATA_SOURCES_OTHER = 'other'
 DATA_SOURCES_LOCAL = 'local'
+DATA_SOURCES_GENEWIZ = 'genewiz'
+
+DATA_SOURCES_SFTP_CORES = 16
+DATA_SOURCES_GENEWIZ_SFTP_URL = 'sftp.genewiz.com'
+DATA_SOURCES_SFTP_URL= 'dnaseq2.igsp.duke.edu'
+
 data_sources = [
     DATA_SOURCES_DUKEDS,
     DATA_SOURCES_SFTP,
     DATA_SOURCES_MISEQ,
     DATA_SOURCES_OTHER,
-    DATA_SOURCES_LOCAL
+    DATA_SOURCES_LOCAL,
+    DATA_SOURCES_GENEWIZ
 ]
 LIBRARY_TYPE_CHIP_SEQ = 'chip_seq'
 LIBRARY_TYPE_RNA_SEQ = 'rna_seq'
@@ -22,8 +29,9 @@ NOTEBOOK_BLURB = "This notebook will create all the necessary files, scripts and
                  "you will simply need to *run the entire notebook* (Cell > Run all) and the system should take care " \
                  "of the rest for you."
 
+
 # Pipelines configuration
-SOFTWARE_ROOTDIR = '/hpc/group/gersbachlab/software/'
+SOFTWARE_ROOTDIR = '/hpc/group/gersbachlab/software/cwl'
 CWL_WORKFLOWS_ROOTDIR = '/hpc/group/gersbachlab/software/IGVF-cwl/v1.0'
 STAR_GENOME = '/hpc/group/gersbachlab/Reference_Data/Genomes/hg38/STAR_genome_sjdbOverhang_49_novelSJDB'
 SEPARATE_JSONS = True

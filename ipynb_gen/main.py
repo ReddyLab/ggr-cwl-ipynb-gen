@@ -62,7 +62,7 @@ class CellSbatch(Cell):
         if prologue is None:
             prologue = []
 
-        content_prologue = ['set -euo pipefail', 'sbatch']
+        content_prologue = ['sbatch', '\\\n']
         if script_output:
             content_prologue.extend(['-o', script_output, '\\\n'])
         if partition:
@@ -160,7 +160,8 @@ def download_fastq_files(conf_args, lib_type, metadata_fn=None):
                               script_output="%s/%s_%s.out" % (logs_dir, conf_args['project_name'],
                                                               inspect.stack()[0][3]),
                               prologue=["source %s %s" % (consts.CONDA_ACTIVATE,
-                                                          consts.CONDA_ENVIRONMENT)],
+                                                          consts.CONDA_ENVIRONMENT),
+                                                          'set -euo pipefail'],
                             )
     cells.extend(execute_cell.to_list())
 
@@ -221,6 +222,37 @@ def merge_fastq_files(conf_args, lib_type, metadata_filename=None, num_samples=N
                               description="Execute file to merge lanes of FASTQ files",
                               depends_on=True,
                               array="0-%d%%20" % (num_samples - 1),
+                              partition=",".join(consts.SLURM_PARTITIONS),
+                              script_output="%s/%s_%s_%%a.out" % (logs_dir, conf_args['project_name'],
+                                                                  inspect.stack()[0][3]), )
+    cells.extend(execute_cell.to_list())
+
+    return cells
+
+
+def symlink_fastq_files(conf_args, lib_type, metadata_filename=None, num_samples=None):
+    cells = []
+    symlink_fn = "%s/processing/%s/scripts/symlink_fastqs_%s.sh" % (
+        conf_args['root_dir'], lib_type, conf_args['project_name']
+    )
+    context = {
+        'output_fn': symlink_fn,
+        'metadata_filename': metadata_filename,
+        'project_name': conf_args['project_name'],
+        'root_dir': conf_args['root_dir'],
+        'lib_type': lib_type,
+        'num_samples': num_samples,
+        'consts': consts
+    }
+    contents = [render('templates/symlink_fastq.j2', context)]
+
+    cell_write_dw_file = Cell(contents=contents, description="#### Symlink FASTQ files with assigned sample names")
+    cells.extend(cell_write_dw_file.to_list())
+
+    logs_dir = "%s/processing/%s/logs" % (conf_args['root_dir'], lib_type)
+    execute_cell = CellSbatch(contents=[symlink_fn],
+                              description="Execute file to symlink FASTQ files",
+                              depends_on=True,
                               partition=",".join(consts.SLURM_PARTITIONS),
                               script_output="%s/%s_%s_%%a.out" % (logs_dir, conf_args['project_name'],
                                                                   inspect.stack()[0][3]), )
@@ -509,10 +541,16 @@ def data_acquisition_cells(conf_args, lib_type, metadata_file, nsamples):
         cells.extend(download_fastq_files(conf_args,
                                           lib_type,
                                           metadata_fn=metadata_file))
-        cells.extend(merge_fastq_files(conf_args,
-                                       lib_type,
-                                       metadata_filename=metadata_file,
-                                       num_samples=nsamples))
+        if conf_args['data_from'] != consts.DATA_SOURCES_GENEWIZ:
+            cells.extend(merge_fastq_files(conf_args,
+                                        lib_type,
+                                        metadata_filename=metadata_file,
+                                        num_samples=nsamples))
+        else:
+            cells.extend(symlink_fastq_files(conf_args,
+                                        lib_type,
+                                        metadata_filename=metadata_file,
+                                        num_samples=nsamples))
     else:
         download_fn = "%s/data/%s/processed_raw_reads/%s" % (
             conf_args['root_dir'], lib_type,

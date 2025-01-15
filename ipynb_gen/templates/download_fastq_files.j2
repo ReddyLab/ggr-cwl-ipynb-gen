@@ -1,5 +1,7 @@
 %%writefile {{ output_fn }}
 #!/bin/bash
+{%if data_source == consts.DATA_SOURCES_GENEWIZ %}#SBATCH --cpus-per-task={{ consts.DATA_SOURCES_SFTP_CORES }}{% endif %}
+
 set -euo pipefail
 
 METADATA={{ metadata_filename }}
@@ -8,8 +10,15 @@ mkdir -p ${DATA_HOME}/raw_reads/
 {% if data_source == consts.DATA_SOURCES_SFTP %}
 read CORE_USER CORE_PROJECT CORE_PASS <<< $(cut -f 1,2,3 $METADATA | tail -n+2 | sort -u)
 cd ${DATA_HOME}/raw_reads/
-lftp -u ${CORE_USER},${CORE_PASS} -e "mirror --parallel=16 --only-missing ${CORE_USER}/${CORE_PROJECT}; exit" "sftp://${CORE_USER}@dnaseq2.igsp.duke.edu"
-exit
+lftp -u ${CORE_USER},${CORE_PASS} -e "mirror --parallel=16 --only-missing ${CORE_USER}/${CORE_PROJECT}; exit" "sftp://${CORE_USER}@{{ consts.DATA_SOURCES_SFTP_URL }}"
+{% elif data_source == consts.DATA_SOURCES_GENEWIZ %}
+while read CORE_USER CORE_PROJECT CORE_PASS; do
+    cd ${DATA_HOME}/raw_reads/
+    lftp -u ${CORE_USER},${CORE_PASS} -e "mirror --parallel={{ consts.DATA_SOURCES_SFTP_CORES }} --only-missing ${CORE_PROJECT}; exit" "sftp://${CORE_USER}@{{ consts.DATA_SOURCES_GENEWIZ_SFTP_URL }}"
+done <<< $(cut -f 1,2,3 $METADATA | awk '$1!=""' | tail -n+2 | sort -u)
+mkdir -p {{ project_name }}
+cd {{ project_name }}
+ln -s ../*/00_fastq/*fastq.gz ./
 {%  elif data_source == consts.DATA_SOURCES_MISEQ  %}
 SEQ_PROJECT={{ project_name }}
 BASEMOUNT_TMP=${DATA_HOME}/raw_reads/${SEQ_PROJECT}/bm_tmp
