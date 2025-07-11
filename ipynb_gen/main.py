@@ -253,6 +253,7 @@ def symlink_fastq_files(conf_args, lib_type, metadata_filename=None, num_samples
     execute_cell = CellSbatch(contents=[symlink_fn],
                               description="Execute file to symlink FASTQ files",
                               depends_on=True,
+                              array=f"0-{num_samples - 1}%%{max(1, min(num_samples - 1,20))}",
                               partition=",".join(consts.SLURM_PARTITIONS),
                               script_output="%s/%s_%s_%%a.out" % (logs_dir, conf_args['project_name'],
                                                                   inspect.stack()[0][3]), )
